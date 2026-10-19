@@ -321,6 +321,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     "Failed to start session",
                     extra={"user_id": user.id},
                 )
+                
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
                     text=_format_photo_error(
@@ -331,8 +332,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 return {"status": "ok"}
 
-
-                if message and message.text:
+        if message and message.text:
             user = state_container.user_service.ensure_user(
                 message.from_user.id
             )
@@ -349,6 +349,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                         chat_id=message.chat.id,
                         text=f"Timezone saved: {timezone}.",
                     )
+
                 else:
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
