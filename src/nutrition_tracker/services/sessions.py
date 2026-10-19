@@ -146,6 +146,29 @@ class SessionService:
         )
         return session.id, prompt
 
+    async def start_text_session(
+        self,
+        user_id: UUID,
+        items: list[dict[str, object]],
+    ) -> tuple[UUID, SessionPrompt]:
+        """Create a meal session from a parsed text message."""
+        context: dict[str, object] = {
+            "flow": "photo",
+            "user_id": str(user_id),
+            "items": items,
+            "current_index": 0,
+            "resolved_items": [],
+            "source": "text",
+        }
+        session = self.session_repository.create_session(
+            user_id=user_id,
+            photo_id=None,
+            status=STATUS_AWAITING_CONFIRMATION,
+            context=context,
+        )
+        prompt = await self._prompt_item_confirmation(session.id, context)
+        return session.id, prompt
+
     def start_library_add_session(self, user_id: UUID) -> SessionPrompt:
         """Start a manual library-add session."""
         context: dict[str, object] = {
