@@ -60,7 +60,9 @@ class AppContainer:
     start_command_handler: StartCommandHandler
     session_service: SessionService
     vision_service: VisionService
+    text_food_parser: TextFoodParser
     nutrition_service: NutritionService
+
     library_service: LibraryService
     meal_log_service: MealLogService
     stats_service: StatsService
