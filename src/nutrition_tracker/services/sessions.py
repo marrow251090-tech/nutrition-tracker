@@ -103,6 +103,7 @@ class SessionService:
     nutrition_service: NutritionService
     meal_log_service: MealLogService
     audit_service: AuditService
+    food_catalog_repository: FoodCatalogRepository | None = None
     debug: bool = False
 
     async def start_session(  # noqa: PLR0913
