@@ -156,7 +156,9 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         start_command_handler=start_handler,
         session_service=session_service,
         vision_service=vision_service,
+        text_food_parser=text_food_parser,
         nutrition_service=nutrition_service,
+
         library_service=library_service,
         meal_log_service=meal_log_service,
         stats_service=stats_service,
