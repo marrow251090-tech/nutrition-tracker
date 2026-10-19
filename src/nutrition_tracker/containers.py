@@ -9,6 +9,7 @@ from nutrition_tracker.adapters.fdc_client import HttpxFdcClient
 from nutrition_tracker.adapters.openai_vision_client import OpenAIVisionClient
 from nutrition_tracker.adapters.supabase_admin_repository import SupabaseAdminRepository
 from nutrition_tracker.adapters.supabase_audit_repository import SupabaseAuditRepository
+from nutrition_tracker.adapters.supabase_food_catalog_repository import SupabaseFoodCatalogRepository
 from nutrition_tracker.adapters.supabase_library_repository import (
     SupabaseLibraryRepository,
 )
