@@ -341,7 +341,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     text=prompt.text,
                     reply_markup=prompt.reply_markup,
                 )
-                return {"status": "ok"}
+            return {"status": "ok"}
 
             if not state_container.user_settings_service.is_timezone_set(
                 user.id
