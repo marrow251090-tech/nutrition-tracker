@@ -556,7 +556,7 @@ class SessionService:
         if option_type == "manual":
             return self._set_manual_target(session_id, context)
       
-        if option_type == "library":
+        if option_type in {"library", "catalog"}:
             _set_item_food(context, option)
             item = _current_item(context)
             grams = item.get("grams")
