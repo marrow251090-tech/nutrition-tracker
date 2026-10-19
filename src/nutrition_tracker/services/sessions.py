@@ -773,15 +773,13 @@ class SessionService:
             ),
         )
 
-        async def _ensure_candidates(self, context: dict[str, object]) -> None:
+    async def _ensure_candidates(self, context: dict[str, object]) -> None:
         item = _current_item(context)
         label = _item_label(item)
         user_id = _require_user_id(context)
 
-        # Keep the user's personal foods available.
         library = self.library_service.search(user_id, label, limit=3)
 
-        # Search the shared Russian catalog before USDA.
         catalog: list[dict[str, object]] = []
         if self.food_catalog_repository is not None:
             try:
@@ -793,7 +791,6 @@ class SessionService:
                     "Shared food catalog search failed: label=%s", label
                 )
 
-        # USDA is the fallback when the shared catalog has no results.
         fdc: list[FoodSummary] = []
         if not catalog:
             try:
@@ -983,7 +980,7 @@ def _build_candidate_options(
     fdc: list[FoodSummary],
 ) -> list[dict[str, object]]:
     options: list[dict[str, object]] = []
-        for food in library:
+    for food in library:
         options.append(
             {
                 "type": "library",
