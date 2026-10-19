@@ -42,9 +42,11 @@ from nutrition_tracker.services.meals import MealLogService
 from nutrition_tracker.services.nutrition import NutritionService
 from nutrition_tracker.services.sessions import SessionService
 from nutrition_tracker.services.stats import StatsService
+from nutrition_tracker.services.text_food_parser import TextFoodParser
 from nutrition_tracker.services.user_settings import UserSettingsService
 from nutrition_tracker.services.users import UserService
 from nutrition_tracker.services.vision import VisionService
+
 
 
 @dataclass
