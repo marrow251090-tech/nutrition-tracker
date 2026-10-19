@@ -547,12 +547,24 @@ class SessionService:
             )
         if option_type == "manual":
             return self._set_manual_target(session_id, context)
+      
         if option_type == "library":
             _set_item_food(context, option)
+            item = _current_item(context)
+            grams = item.get("grams")
+
+            if (
+                context.get("source") == "text"
+                and isinstance(grams, int | float)
+                and grams > 0
+            ):
+                return await self._advance_or_summarize(session_id, context)
+
             self.session_repository.update_session(
                 session_id, status=STATUS_AWAITING_PORTION_CHOICE, context=context
             )
             return _portion_prompt(session_id, context)
+
         if option_type == "fdc":
             fdc_id = option.get("fdc_id")
             if isinstance(fdc_id, int):
