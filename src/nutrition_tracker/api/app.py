@@ -327,8 +327,11 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
             return {"status": "ok"}
 
-        if message and message.text:
-            user = state_container.user_service.ensure_user(message.from_user.id)
+            if message and message.text:
+            user = state_container.user_service.ensure_user(
+                message.from_user.id
+            )
+
             prompt = await state_container.session_service.handle_text(
                 user.id, message.text
             )
@@ -339,7 +342,10 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     reply_markup=prompt.reply_markup,
                 )
                 return {"status": "ok"}
-            if not state_container.user_settings_service.is_timezone_set(user.id):
+
+            if not state_container.user_settings_service.is_timezone_set(
+                user.id
+            ):
                 timezone = message.text.strip()
                 if _is_valid_timezone(timezone):
                     state_container.user_settings_service.set_timezone(
@@ -352,8 +358,117 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 else:
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
-                        text=("Please send a valid timezone like America/Los_Angeles."),
+                        text=(
+                            "Please send a valid timezone "
+                            "like Europe/Moscow."
+                        ),
                     )
+                return {"status": "ok"}
+
+            session_repo = (
+                state_container.session_service.session_repository
+            )
+            active = session_repo.get_active_session(user.id)
+            if active:
+                await state_container.telegram_client.send_message(
+                    chat_id=message.chat.id,
+                    text=(
+                        "У тебя уже есть активная сессия. "
+                        "Продолжи её или отправь /cancel."
+                    ),
+                )
+                return {"status": "ok"}
+
+            try:
+                parsed = await state_container.text_food_parser.parse(
+                    message.text
+                )
+            except Exception:
+                logger.exception(
+                    "Text food parsing failed",
+                    extra={"user_id": user.id},
+                )
+                await state_container.telegram_client.send_message(
+                    chat_id=message.chat.id,
+                    text=(
+                        "Не удалось разобрать сообщение. "
+                        "Попробуй написать продукты и их количество ещё раз."
+                    ),
+                )
+                return {"status": "ok"}
+
+            if parsed.needs_clarification or not parsed.items:
+                await state_container.telegram_client.send_message(
+                    chat_id=message.chat.id,
+                    text=(
+                        parsed.clarification_question
+                        or "Напиши, что ты съел и в каком количестве."
+                    ),
+                )
+                return {"status": "ok"}
+
+            items = []
+            for item in parsed.items:
+                if item.unit == "g":
+                    grams = item.quantity
+                elif (
+                    item.unit == "piece"
+                    and any(
+                        word in item.name.lower()
+                        for word in ("яйц", "egg")
+                    )
+                ):
+                    grams = item.quantity * 50
+                else:
+                    await state_container.telegram_client.send_message(
+                        chat_id=message.chat.id,
+                        text=(
+                            f"Уточни вес продукта «{item.name}» "
+                            "в граммах. Для точного расчёта он нужен."
+                        ),
+                    )
+                    return {"status": "ok"}
+
+                label = item.name
+                if item.preparation and item.preparation.lower() not in label.lower():
+                    label = f"{item.preparation} {label}"
+
+                items.append(
+                    {
+                        "label": label,
+                        "name": label,
+                        "grams": grams,
+                    }
+                )
+
+            try:
+                _, prompt = (
+                    await state_container.session_service.start_text_session(
+                        user_id=user.id,
+                        items=items,
+                    )
+                )
+                await state_container.telegram_client.send_message(
+                    chat_id=message.chat.id,
+                    text=prompt.text,
+                    reply_markup=prompt.reply_markup,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to start text meal session",
+                    extra={"user_id": user.id},
+                )
+                await state_container.telegram_client.send_message(
+                    chat_id=message.chat.id,
+                    text=(
+                        "Не удалось начать запись еды. "
+                        "Попробуй ещё раз."
+                    ),
+                )
+
+        return {"status": "ok"}
+
+                              
         return {"status": "ok"}
 
     return app
