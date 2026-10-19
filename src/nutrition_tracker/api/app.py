@@ -315,9 +315,9 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     text=prompt.text,
                     reply_markup=prompt.reply_markup,
                 )
-            except Exception as exc:
+                     except Exception as exc:
                 logger.exception("Failed to start session", extra={"user_id": user.id})
-                                await state_container.telegram_client.send_message(
+                await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
                     text=_format_photo_error(
                         state_container,
