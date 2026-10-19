@@ -325,23 +325,14 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                         ("Sorry, I couldn't start a meal session. Please try again."),
                     ),
                 )
-            return {"status": "ok"}
+                        return {"status": "ok"}
 
-            if message and message.text:
+        if message and message.text:
             user = state_container.user_service.ensure_user(
                 message.from_user.id
             )
-
-            prompt = await state_container.session_service.handle_text(
-                user.id, message.text
+                message.from_user.id
             )
-            if prompt:
-                await state_container.telegram_client.send_message(
-                    chat_id=message.chat.id,
-                    text=prompt.text,
-                    reply_markup=prompt.reply_markup,
-                )
-            return {"status": "ok"}
 
             if not state_container.user_settings_service.is_timezone_set(
                 user.id
@@ -358,10 +349,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 else:
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
-                        text=(
-                            "Please send a valid timezone "
-                            "like Europe/Moscow."
-                        ),
+                        text="Please send a valid timezone like Europe/Moscow.",
                     )
                 return {"status": "ok"}
 
@@ -369,14 +357,22 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 state_container.session_service.session_repository
             )
             active = session_repo.get_active_session(user.id)
-            if active:
-                await state_container.telegram_client.send_message(
-                    chat_id=message.chat.id,
-                    text=(
-                        "У тебя уже есть активная сессия. "
-                        "Продолжи её или отправь /cancel."
-                    ),
+
+            if active and active.status not in {"COMPLETED", "CANCELLED"}:
+                prompt = await state_container.session_service.handle_text(
+                    user.id, message.text
                 )
+                if prompt:
+                    await state_container.telegram_client.send_message(
+                        chat_id=message.chat.id,
+                        text=prompt.text,
+                        reply_markup=prompt.reply_markup,
+                    )
+                else:
+                    await state_container.telegram_client.send_message(
+                        chat_id=message.chat.id,
+                        text="У тебя уже есть активная сессия. Продолжи её или отправь /cancel.",
+                    )
                 return {"status": "ok"}
 
             try:
@@ -390,20 +386,15 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=(
-                        "Не удалось разобрать сообщение. "
-                        "Попробуй написать продукты и их количество ещё раз."
-                    ),
+                    text="Не удалось разобрать сообщение. Попробуй написать продукты и их количество ещё раз.",
                 )
                 return {"status": "ok"}
 
             if parsed.needs_clarification or not parsed.items:
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=(
-                        parsed.clarification_question
-                        or "Напиши, что ты съел и в каком количестве."
-                    ),
+                    text=parsed.clarification_question
+                    or "Напиши, что ты съел и в каком количестве.",
                 )
                 return {"status": "ok"}
 
@@ -411,21 +402,14 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
             for item in parsed.items:
                 if item.unit == "g":
                     grams = item.quantity
-                elif (
-                    item.unit == "piece"
-                    and any(
-                        word in item.name.lower()
-                        for word in ("яйц", "egg")
-                    )
+                elif item.unit == "piece" and any(
+                    word in item.name.lower() for word in ("яйц", "egg")
                 ):
                     grams = item.quantity * 50
                 else:
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
-                        text=(
-                            f"Уточни вес продукта «{item.name}» "
-                            "в граммах. Для точного расчёта он нужен."
-                        ),
+                        text=f"Уточни вес продукта «{item.name}» в граммах.",
                     )
                     return {"status": "ok"}
 
@@ -442,11 +426,9 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
 
             try:
-                _, prompt = (
-                    await state_container.session_service.start_text_session(
-                        user_id=user.id,
-                        items=items,
-                    )
+                _, prompt = await state_container.session_service.start_text_session(
+                    user_id=user.id,
+                    items=items,
                 )
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
@@ -460,19 +442,13 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=(
-                        "Не удалось начать запись еды. "
-                        "Попробуй ещё раз."
-                    ),
+                    text="Не удалось начать запись еды. Попробуй ещё раз.",
                 )
 
         return {"status": "ok"}
 
-                              
-        return {"status": "ok"}
-
     return app
-
+    
 
 def _select_largest_photo(photos: list[TelegramPhotoSize]) -> TelegramPhotoSize:
     """Select the largest photo size from the Telegram payload."""
