@@ -98,6 +98,11 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         reasoning_effort=resolved_settings.openai_reasoning_effort,
         store=resolved_settings.openai_store,
     )
+        text_food_parser = TextFoodParser(
+        client=openai_client.client,
+        model=resolved_settings.openai_model,
+        reasoning_effort=resolved_settings.openai_reasoning_effort,
+    )
     fdc_client = HttpxFdcClient.create(
         api_key=resolved_settings.fdc_api_key,
         base_url=resolved_settings.fdc_base_url,
