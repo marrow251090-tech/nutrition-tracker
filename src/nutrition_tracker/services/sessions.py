@@ -546,7 +546,7 @@ class SessionService:
                 option.get("label"),
             )
         if option_type == "manual":
-            return self._set_manual_target(session_id, context)
+        return self._set_manual_target(session_id, context)
       
         if option_type == "library":
             _set_item_food(context, option)
