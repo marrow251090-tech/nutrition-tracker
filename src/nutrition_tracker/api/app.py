@@ -300,6 +300,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 return {"status": "ok"}
 
+            
             try:
                 vision_items = [item.model_dump() for item in vision_result.items]
                 _, prompt = await state_container.session_service.start_session(
@@ -315,17 +316,21 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     text=prompt.text,
                     reply_markup=prompt.reply_markup,
                 )
-                     except Exception as exc:
-                logger.exception("Failed to start session", extra={"user_id": user.id})
+            except Exception as exc:
+                logger.exception(
+                    "Failed to start session",
+                    extra={"user_id": user.id},
+                )
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
                     text=_format_photo_error(
                         state_container,
                         exc,
-                        ("Sorry, I couldn't start a meal session. Please try again."),
+                        "Sorry, I couldn't start a meal session. Please try again.",
                     ),
                 )
                 return {"status": "ok"}
+
 
                 if message and message.text:
             user = state_container.user_service.ensure_user(
