@@ -13,6 +13,13 @@ from nutrition_tracker.services.audit import AuditService
 from nutrition_tracker.services.library import LibraryService
 from nutrition_tracker.services.meals import MealLogService
 from nutrition_tracker.services.nutrition import NutritionService
+class FoodCatalogRepository(Protocol):
+    """Read foods from the shared catalog."""
+
+    def search_foods(
+        self, query: str, limit: int = 5
+    ) -> list[dict[str, object]]:
+        """Search the shared catalog by food name."""
 
 STATUS_AWAITING_CONFIRMATION = "AWAITING_CONFIRMATION"
 STATUS_AWAITING_ITEM_LIST = "AWAITING_ITEM_LIST"
