@@ -64,9 +64,10 @@ class MealLogRepository(Protocol):
 class MealLogService:
     """Service that computes macros and persists meal logs."""
 
-    nutrition_service: NutritionService
+        nutrition_service: NutritionService
     library_service: LibraryService
     repository: MealLogRepository
+    food_catalog_repository: FoodCatalogRepository | None = None
     debug: bool = False
 
     async def compute_summary(self, items: list[dict[str, object]]) -> MealLogSummary:
