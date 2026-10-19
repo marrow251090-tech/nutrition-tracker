@@ -773,25 +773,46 @@ class SessionService:
             ),
         )
 
-    async def _ensure_candidates(self, context: dict[str, object]) -> None:
+        async def _ensure_candidates(self, context: dict[str, object]) -> None:
         item = _current_item(context)
         label = _item_label(item)
         user_id = _require_user_id(context)
+
+        # Keep the user's personal foods available.
         library = self.library_service.search(user_id, label, limit=3)
-        try:
-            fdc = await self.nutrition_service.search(label, limit=3)
-        except Exception:
-            _logger.exception("FDC search failed: label=%s", label)
-            fdc = []
+
+        # Search the shared Russian catalog before USDA.
+        catalog: list[dict[str, object]] = []
+        if self.food_catalog_repository is not None:
+            try:
+                catalog = self.food_catalog_repository.search_foods(
+                    label, limit=5
+                )
+            except Exception:
+                _logger.exception(
+                    "Shared food catalog search failed: label=%s", label
+                )
+
+        # USDA is the fallback when the shared catalog has no results.
+        fdc: list[FoodSummary] = []
+        if not catalog:
+            try:
+                fdc = await self.nutrition_service.search(label, limit=3)
+            except Exception:
+                _logger.exception("FDC search failed: label=%s", label)
+
         if self.debug:
             _logger.info(
-                "Candidate options: label=%s library=%s fdc=%s",
+                "Candidate options: label=%s library=%s catalog=%s fdc=%s",
                 label,
                 len(library),
+                len(catalog),
                 len(fdc),
             )
-        context["candidate_options"] = _build_candidate_options(library, fdc)
 
+        context["candidate_options"] = _build_candidate_options(
+            library, catalog, fdc
+        )
 
 def _callback_data(session_id: UUID, action: str, payload: str | None = None) -> str:
     """Build callback_data within Telegram's 64-byte limit."""
