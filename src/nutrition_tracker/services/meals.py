@@ -1,3 +1,4 @@
+
 """Meal logging service."""
 
 import logging
@@ -17,13 +18,15 @@ from nutrition_tracker.domain.nutrition import MacroProfile
 from nutrition_tracker.domain.stats import MealLogRow
 from nutrition_tracker.services.library import LibraryService
 from nutrition_tracker.services.nutrition import NutritionService
+
+_logger = logging.getLogger(__name__)
+
+
 class FoodCatalogRepository(Protocol):
     """Read-only interface for the shared food catalog."""
 
     def get_food_by_name(self, query: str) -> dict[str, object] | None:
         """Find a food by name."""
-
-_logger = logging.getLogger(__name__)
 
 
 class MealLogRepository(Protocol):
@@ -56,7 +59,9 @@ class MealLogRepository(Protocol):
     ) -> None:
         """Update meal item grams and macros."""
 
-    def update_meal_log_totals(self, meal_log_id: UUID, totals: MacroProfile) -> None:
+    def update_meal_log_totals(
+        self, meal_log_id: UUID, totals: MacroProfile
+    ) -> None:
         """Update totals for a meal log."""
 
 
@@ -64,16 +69,21 @@ class MealLogRepository(Protocol):
 class MealLogService:
     """Service that computes macros and persists meal logs."""
 
-        nutrition_service: NutritionService
+    nutrition_service: NutritionService
     library_service: LibraryService
     repository: MealLogRepository
     food_catalog_repository: FoodCatalogRepository | None = None
     debug: bool = False
 
-    async def compute_summary(self, items: list[dict[str, object]]) -> MealLogSummary:
+    async def compute_summary(
+        self, items: list[dict[str, object]]
+    ) -> MealLogSummary:
         """Compute totals and snapshots without persisting."""
         snapshots, total = await _build_snapshots(
-            self.nutrition_service, items, debug=self.debug
+            self.nutrition_service,
+            items,
+            catalog_repository=self.food_catalog_repository,
+            debug=self.debug,
         )
         return MealLogSummary(
             meal_id=None,
@@ -87,10 +97,23 @@ class MealLogService:
     async def save_meal(
         self, user_id: UUID, items: list[dict[str, object]]
     ) -> MealLogSummary:
-        """Compute macros for items and persist the meal log."""
-        resolved_items = _ensure_library_refs(self.library_service, items, user_id)
+        """Compute macros and persist the meal log."""
+        # Resolve nutrition before creating personal-library records.
+        # This avoids saving zero macros when the item needs a lookup.
+        enriched_items = await _resolve_items_with_macros(
+            self.nutrition_service,
+            items,
+            catalog_repository=self.food_catalog_repository,
+            debug=self.debug,
+        )
+        resolved_items = _ensure_library_refs(
+            self.library_service, enriched_items, user_id
+        )
         snapshots, total = await _build_snapshots(
-            self.nutrition_service, resolved_items, debug=self.debug
+            self.nutrition_service,
+            resolved_items,
+            catalog_repository=self.food_catalog_repository,
+            debug=self.debug,
         )
         meal_id = self.repository.create_meal_log(
             user_id=user_id,
@@ -98,6 +121,7 @@ class MealLogService:
             totals=total,
         )
         self.repository.create_meal_items(meal_id, snapshots)
+
         for snapshot in snapshots:
             if snapshot.food_id:
                 self.library_service.record_use(snapshot.food_id)
@@ -116,6 +140,7 @@ class MealLogService:
         log = self.repository.get_meal_log(meal_log_id)
         if log is None:
             return None
+
         items = self.repository.list_meal_items(meal_log_id)
         return MealLogDetail(
             id=log.meal_id,
@@ -130,23 +155,29 @@ class MealLogService:
     def update_meal_item_grams(
         self, meal_item_id: UUID, grams: float
     ) -> MealLogDetail | None:
-        """Update a meal item's grams and refresh totals."""
+        """Update an item's grams and refresh meal totals."""
         item = self.repository.get_meal_item(meal_item_id)
         if item is None:
             return None
+
         base_macros, basis, serving_size = _macros_from_snapshot(
             item.nutrition_snapshot
         )
         updated_macros = _compute_portion_macros(
             base_macros, grams, basis, serving_size
         )
-        self.repository.update_meal_item(meal_item_id, grams, updated_macros)
+        self.repository.update_meal_item(
+            meal_item_id, grams, updated_macros
+        )
+
         items = self.repository.list_meal_items(item.meal_log_id)
         totals = _sum_totals(items)
         self.repository.update_meal_log_totals(item.meal_log_id, totals)
+
         log = self.repository.get_meal_log(item.meal_log_id)
         if log is None:
             return None
+
         return MealLogDetail(
             id=log.meal_id,
             logged_at=log.logged_at,
@@ -162,18 +193,26 @@ async def _build_snapshots(
     nutrition_service: NutritionService,
     items: list[dict[str, object]],
     *,
+    catalog_repository: FoodCatalogRepository | None = None,
     debug: bool = False,
 ) -> tuple[list[MealItemSnapshot], MacroProfile]:
     snapshots: list[MealItemSnapshot] = []
     total = MacroProfile(0.0, 0.0, 0.0, 0.0)
+
     for item in items:
         label = str(item.get("name") or item.get("label") or "item")
         grams = _to_float(item.get("grams"))
         base_macros, basis, serving_size = await _resolve_base_macros(
-            nutrition_service, item, debug=debug
+            nutrition_service,
+            item,
+            catalog_repository=catalog_repository,
+            debug=debug,
         )
-        portion = _compute_portion_macros(base_macros, grams, basis, serving_size)
+        portion = _compute_portion_macros(
+            base_macros, grams, basis, serving_size
+        )
         food_id = _parse_uuid(item.get("food_id"))
+
         nutrition_snapshot = {
             "basis": basis,
             "serving_size_g": serving_size,
@@ -184,6 +223,7 @@ async def _build_snapshots(
             "source_type": item.get("source_type"),
             "source_ref": item.get("source_ref"),
         }
+
         snapshots.append(
             MealItemSnapshot(
                 name=label,
@@ -196,19 +236,61 @@ async def _build_snapshots(
                 nutrition_snapshot=nutrition_snapshot,
             )
         )
+
         total = MacroProfile(
             calories=total.calories + portion.calories,
             protein_g=total.protein_g + portion.protein_g,
             fat_g=total.fat_g + portion.fat_g,
             carbs_g=total.carbs_g + portion.carbs_g,
         )
+
     return snapshots, total
+
+
+async def _resolve_items_with_macros(
+    nutrition_service: NutritionService,
+    items: list[dict[str, object]],
+    *,
+    catalog_repository: FoodCatalogRepository | None = None,
+    debug: bool = False,
+) -> list[dict[str, object]]:
+    """Resolve missing macros before adding items to the personal library."""
+    resolved: list[dict[str, object]] = []
+
+    for item in items:
+        if _has_macros(item):
+            resolved.append(dict(item))
+            continue
+
+        label = str(item.get("label") or item.get("name") or "item")
+        macros, basis, serving_size = await _lookup_food_macros(
+            nutrition_service,
+            label,
+            catalog_repository=catalog_repository,
+            debug=debug,
+        )
+
+        enriched_item = dict(item)
+        enriched_item.update(
+            {
+                "calories": macros.calories,
+                "protein_g": macros.protein_g,
+                "fat_g": macros.fat_g,
+                "carbs_g": macros.carbs_g,
+                "basis": basis,
+                "serving_size_g": serving_size,
+            }
+        )
+        resolved.append(enriched_item)
+
+    return resolved
 
 
 async def _resolve_base_macros(
     nutrition_service: NutritionService,
     item: dict[str, object],
     *,
+    catalog_repository: FoodCatalogRepository | None = None,
     debug: bool = False,
 ) -> tuple[MacroProfile, str, float | None]:
     if _has_macros(item):
@@ -218,12 +300,14 @@ async def _resolve_base_macros(
                 item.get("name") or item.get("label"),
                 item.get("source_type"),
             )
+
         basis = str(item.get("basis") or "per100g")
         serving_size = (
             float(item["serving_size_g"])
             if isinstance(item.get("serving_size_g"), int | float)
             else None
         )
+
         return (
             MacroProfile(
                 calories=float(item.get("calories", 0.0)),
@@ -234,18 +318,52 @@ async def _resolve_base_macros(
             basis,
             serving_size,
         )
+
     label = str(item.get("label") or item.get("name") or "item")
+    return await _lookup_food_macros(
+        nutrition_service,
+        label,
+        catalog_repository=catalog_repository,
+        debug=debug,
+    )
+
+
+async def _lookup_food_macros(
+    nutrition_service: NutritionService,
+    label: str,
+    *,
+    catalog_repository: FoodCatalogRepository | None = None,
+    debug: bool = False,
+) -> tuple[MacroProfile, str, float | None]:
+    """Try the shared catalog first, then USDA FoodData Central."""
+    if catalog_repository is not None:
+        try:
+            food = catalog_repository.get_food_by_name(label)
+            if food is not None:
+                macros = MacroProfile(
+                    calories=_to_float(food.get("calories")),
+                    protein_g=_to_float(food.get("protein_g")),
+                    fat_g=_to_float(food.get("fat_g")),
+                    carbs_g=_to_float(food.get("carbs_g")),
+                )
+                if debug:
+                    _logger.info("Macros found in shared catalog: %s", label)
+
+                # Catalog values are stored per 100 grams.
+                return macros, "per100g", None
+        except Exception:
+            _logger.exception(
+                "Shared food catalog lookup failed for %s; falling back to FDC",
+                label,
+            )
+
     if debug:
         _logger.info("Macros fallback to FDC: label=%s", label)
-    return await _lookup_fdc_macros(nutrition_service, label)
 
-
-async def _lookup_fdc_macros(
-    nutrition_service: NutritionService, label: str
-) -> tuple[MacroProfile, str, float | None]:
     results = await nutrition_service.search(label, limit=1)
     if not results:
         return MacroProfile(0.0, 0.0, 0.0, 0.0), "per100g", None
+
     details = await nutrition_service.get_food(results[0].fdc_id)
     return details.macros, "per100g", details.serving_size_g
 
@@ -255,10 +373,12 @@ def _compute_portion_macros(
 ) -> MacroProfile:
     if grams <= 0:
         return MacroProfile(0.0, 0.0, 0.0, 0.0)
+
     if basis == "perServing" and serving_size_g and serving_size_g > 0:
         factor = grams / serving_size_g
     else:
         factor = grams / 100.0
+
     return MacroProfile(
         calories=base.calories * factor,
         protein_g=base.protein_g * factor,
@@ -268,7 +388,11 @@ def _compute_portion_macros(
 
 
 def _has_macros(item: dict[str, object]) -> bool:
-    return all(key in item for key in ("calories", "protein_g", "fat_g", "carbs_g"))
+    keys = ("calories", "protein_g", "fat_g", "carbs_g")
+    return all(
+        key in item and item[key] is not None
+        for key in keys
+    )
 
 
 def _parse_uuid(value: object) -> UUID | None:
@@ -318,6 +442,7 @@ def _macros_from_snapshot(
 
 def _sum_totals(items: list[MealItemRecord]) -> MacroProfile:
     total = MacroProfile(0.0, 0.0, 0.0, 0.0)
+
     for item in items:
         total = MacroProfile(
             calories=total.calories + item.calories,
@@ -325,6 +450,7 @@ def _sum_totals(items: list[MealItemRecord]) -> MacroProfile:
             fat_g=total.fat_g + item.fat_g,
             carbs_g=total.carbs_g + item.carbs_g,
         )
+
     return total
 
 
@@ -334,14 +460,17 @@ def _ensure_library_refs(
     user_id: UUID,
 ) -> list[dict[str, object]]:
     resolved: list[dict[str, object]] = []
+
     for item in items:
         if item.get("food_id"):
             resolved.append(item)
             continue
+
         source_type = str(item.get("source_type") or "manual")
         if source_type == "library":
             resolved.append(item)
             continue
+
         payload = {
             "name": str(item.get("name") or item.get("label") or "item"),
             "brand": item.get("brand"),
@@ -350,26 +479,32 @@ def _ensure_library_refs(
             "source_ref": item.get("source_ref"),
             "basis": str(item.get("basis") or "per100g"),
             "serving_size_g": item.get("serving_size_g"),
-            "calories": float(item.get("calories", 0.0)),
-            "protein_g": float(item.get("protein_g", 0.0)),
-            "fat_g": float(item.get("fat_g", 0.0)),
-            "carbs_g": float(item.get("carbs_g", 0.0)),
+            "calories": _to_float(item.get("calories")),
+            "protein_g": _to_float(item.get("protein_g")),
+            "fat_g": _to_float(item.get("fat_g")),
+            "carbs_g": _to_float(item.get("carbs_g")),
         }
+
         food = _get_or_create_food(library_service, user_id, payload)
         resolved_item = dict(item)
         resolved_item["food_id"] = str(food.id)
         resolved.append(resolved_item)
+
     return resolved
 
 
 def _get_or_create_food(
-    library_service: LibraryService, user_id: UUID, payload: dict[str, object]
+    library_service: LibraryService,
+    user_id: UUID,
+    payload: dict[str, object],
 ) -> LibraryFood:
     source_ref = payload.get("source_ref")
+
     if source_ref:
         existing = library_service.find_by_source_ref(
             user_id, str(payload.get("source_type")), str(source_ref)
         )
         if existing:
             return existing
+
     return library_service.create_manual_food(user_id, payload)
