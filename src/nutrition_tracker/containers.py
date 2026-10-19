@@ -120,6 +120,7 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         nutrition_service=nutrition_service,
         library_service=library_service,
         repository=meal_log_repository,
+        food_catalog_repository=food_catalog_repository,
         debug=debug,
     )
     audit_service = AuditService(audit_repository)
