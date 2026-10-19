@@ -978,10 +978,12 @@ def _manual_store_prompt(session_id: UUID, name: str) -> SessionPrompt:
 
 
 def _build_candidate_options(
-    library: list[LibraryFood], fdc: list[FoodSummary]
+    library: list[LibraryFood],
+    catalog: list[dict[str, object]],
+    fdc: list[FoodSummary],
 ) -> list[dict[str, object]]:
     options: list[dict[str, object]] = []
-    for food in library:
+        for food in library:
         options.append(
             {
                 "type": "library",
@@ -1000,6 +1002,32 @@ def _build_candidate_options(
                 "carbs_g": food.carbs_g,
             }
         )
+
+    for food in catalog:
+        name = str(food.get("name") or food.get("name_normalized") or "item")
+        basis_raw = str(food.get("basis") or "100g")
+        basis = (
+            "perServing"
+            if basis_raw.lower() in {"perserving", "per_serving"}
+            else "per100g"
+        )
+
+        options.append(
+            {
+                "type": "catalog",
+                "label": name,
+                "name": name,
+                "source_type": "catalog",
+                "source_ref": str(food["id"]) if food.get("id") else None,
+                "basis": basis,
+                "serving_size_g": None,
+                "calories": food.get("calories"),
+                "protein_g": food.get("protein_g"),
+                "fat_g": food.get("fat_g"),
+                "carbs_g": food.get("carbs_g"),
+            }
+        )
+
     for summary in fdc:
         options.append(
             {
