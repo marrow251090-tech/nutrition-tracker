@@ -17,6 +17,11 @@ from nutrition_tracker.domain.nutrition import MacroProfile
 from nutrition_tracker.domain.stats import MealLogRow
 from nutrition_tracker.services.library import LibraryService
 from nutrition_tracker.services.nutrition import NutritionService
+class FoodCatalogRepository(Protocol):
+    """Read-only interface for the shared food catalog."""
+
+    def get_food_by_name(self, query: str) -> dict[str, object] | None:
+        """Find a food by name."""
 
 _logger = logging.getLogger(__name__)
 
