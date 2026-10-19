@@ -327,10 +327,8 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 return {"status": "ok"}
 
-        if message and message.text:
+                if message and message.text:
             user = state_container.user_service.ensure_user(
-                message.from_user.id
-            )
                 message.from_user.id
             )
 
