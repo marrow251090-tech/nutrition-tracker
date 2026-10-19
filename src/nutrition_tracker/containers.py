@@ -82,6 +82,7 @@ def build_container(settings: Settings | None = None) -> AppContainer:
     photo_repository = SupabasePhotoRepository(supabase_client)
     session_repository = SupabaseSessionRepository(supabase_client)
     library_repository = SupabaseLibraryRepository(supabase_client)
+    food_catalog_repository = SupabaseFoodCatalogRepository(supabase_client)
     meal_log_repository = SupabaseMealLogRepository(supabase_client)
     stats_repository = SupabaseStatsRepository(supabase_client)
     user_settings_repository = SupabaseUserSettingsRepository(supabase_client)
