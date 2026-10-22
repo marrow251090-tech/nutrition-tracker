@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5.2"
     openai_reasoning_effort: str = "high"
     openai_store: bool = False
-    claudepoint_api_key: str | None = None
+    claudepoint_api_key: str = claudepoint-live-92yUzZiMnXmxxHnASHTfpifN8k3xcn5v
     claudepoint_base_url: str = "https://api.claudepoint.io/v1"
     claudepoint_model: str = "ch-45h"
     fdc_api_key: str
