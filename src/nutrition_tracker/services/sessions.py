@@ -414,7 +414,7 @@ class SessionService:
                 session.id, status=STATUS_EDIT_ENTER_GRAMS, context=context
             )
             name = context.get("edit_item_name", "item")
-            return SessionPrompt(text=f"Enter new grams for {name}.")
+            return SessionPrompt(text="Введи новый вес продукта «{name}» в граммах.")
         return None
 
     def _handle_edit_text(
@@ -424,7 +424,7 @@ class SessionService:
             return None
         grams = _parse_grams(text)
         if grams is None:
-            return SessionPrompt(text="Please reply with grams.")
+            return SessionPrompt(text="Введи вес продукта в граммах числом.")
         item_id_raw = session.context.get("edit_item_id")
         if not isinstance(item_id_raw, str):
             return None
@@ -507,11 +507,11 @@ class SessionService:
             session_id, status=STATUS_AWAITING_ITEM_CONFIRMATION, context=context
         )
         return SessionPrompt(
-            text=f"For {label}, I think it's {choice}. Use this?",
+            text=f"Для продукта «{label}» я нашёл вариант «{choice}». Подходит?",
             reply_markup=_inline_keyboard(
                 [
-                    ("Yes", _callback_data(session_id, "item_yes")),
-                    ("No", _callback_data(session_id, "item_no")),
+                    ("Да", _callback_data(session_id, "item_yes")),
+                    ("Нет", _callback_data(session_id, "item_no")),
                 ]
             ),
         )
@@ -534,7 +534,7 @@ class SessionService:
         )
         label = _current_item_label(context)
         return SessionPrompt(
-            text=f"Select the {label} item:",
+            text=f"Выбери подходящий вариант продукта «{label}»:",
             reply_markup=_inline_keyboard(buttons),
         )
 
@@ -633,7 +633,7 @@ class SessionService:
             session_id, status=STATUS_AWAITING_MANUAL_NAME, context=context
         )
         label = _current_item_label(context)
-        return SessionPrompt(text=f"Enter the name for {label}.")
+        return SessionPrompt(text=f"Введи название продукта «{label}».")
 
     def _set_manual_basis(
         self, session_id: UUID, context: dict[str, object], basis: str
@@ -645,7 +645,7 @@ class SessionService:
             self.session_repository.update_session(
                 session_id, status=STATUS_AWAITING_MANUAL_SERVING, context=context
             )
-            return SessionPrompt(text="Enter the serving size in grams.")
+            return SessionPrompt(text="Введи вес одной порции в граммах.")
         self.session_repository.update_session(
             session_id, status=STATUS_AWAITING_MANUAL_MACROS, context=context
         )
@@ -736,7 +736,7 @@ class SessionService:
             self.session_repository.update_session(
                 session_id, status=STATUS_AWAITING_MANUAL_GRAMS, context=context
             )
-            return SessionPrompt(text="Enter grams for the item.")
+            return SessionPrompt(text="Введи вес продукта в граммах числом.")
         _record_current_grams(context, estimate)
         return await self._advance_or_summarize(session_id, context)
 
@@ -768,9 +768,9 @@ class SessionService:
             text=_format_summary(summary),
             reply_markup=_inline_keyboard(
                 [
-                    ("Save", _callback_data(session_id, "save")),
-                    ("Edit", _callback_data(session_id, "edit")),
-                    ("Cancel", _callback_data(session_id, "cancel")),
+                    ("Сохранить", _callback_data(session_id, "save")),
+                    ("Изменить", _callback_data(session_id, "edit")),
+                    ("Отмена", _callback_data(session_id, "cancel")),
                 ]
             ),
         )
@@ -938,25 +938,25 @@ def _portion_prompt(session_id: UUID, context: dict[str, object]) -> SessionProm
     if estimate:
         buttons.append(
             (
-                f"Use {estimate}g (est.)",
+                f"Использовать {estimate} г (примерно)",
                 _callback_data(session_id, "portion_est"),
             )
         )
-    buttons.append(("Enter grams", _callback_data(session_id, "portion_manual")))
-    buttons.append(("Skip item", _callback_data(session_id, "portion_skip")))
+    buttons.append(("Ввести вес", _callback_data(session_id, "portion_manual")))
+    buttons.append(("Пропустить продукт", _callback_data(session_id, "portion_skip")))
     return SessionPrompt(
-        text=f"How much {name} is there?",
+        text=f"Сколько граммов продукта «{name}»?",
         reply_markup=_inline_keyboard(buttons),
     )
 
 
 def _manual_basis_prompt(session_id: UUID, name: str) -> SessionPrompt:
     return SessionPrompt(
-        text=f"Are the nutrition values for {name} per 100g or per serving?",
+        text=f"Для продукта «{name}» указаны значения на 100 г или на порцию?",
         reply_markup=_inline_keyboard(
             [
-                ("Per 100g", _callback_data(session_id, "basis_100")),
-                ("Per serving", _callback_data(session_id, "basis_serv")),
+                ("На 100 г", _callback_data(session_id, "basis_100")),
+                ("На порцию", _callback_data(session_id, "basis_serv")),
             ]
         ),
     )
@@ -964,13 +964,13 @@ def _manual_basis_prompt(session_id: UUID, name: str) -> SessionPrompt:
 
 def _manual_store_prompt(session_id: UUID, name: str) -> SessionPrompt:
     return SessionPrompt(
-        text=f"Which store is {name} from?",
+        text=f"Из какого магазина продукт «{name}»?",
         reply_markup=_inline_keyboard(
             [
-                ("Costco", _callback_data(session_id, "store_costco")),
-                ("Trader Joe's", _callback_data(session_id, "store_tj")),
-                ("Target", _callback_data(session_id, "store_target")),
-                ("Other/Skip", _callback_data(session_id, "store_other")),
+                ("Пятёрочка", _callback_data(session_id, "store_costco")),
+                ("Магнит", _callback_data(session_id, "store_tj")),
+                ("Перекрёсток", _callback_data(session_id, "store_target")),
+                (""Другой / пропустить",, _callback_data(session_id, "store_other")),
             ]
         ),
     )
@@ -1037,7 +1037,7 @@ def _build_candidate_options(
                 "source_type": "fdc",
             }
         )
-    options.append({"type": "manual", "label": "Enter manually"})
+    options.append({"type": "manual", "label": "Ввести вручную"})
     return options
 
 
@@ -1123,7 +1123,7 @@ def _edit_choice_prompt(session_id: UUID, context: dict[str, object]) -> Session
                     (name, _callback_data(session_id, "edit_item", str(index)))
                 )
     return SessionPrompt(
-        text="Which item do you want to edit?",
+        text="Какой продукт хочешь изменить?",
         reply_markup=_inline_keyboard(buttons),
     )
 
@@ -1224,7 +1224,7 @@ def _detail_item_snapshot(
 
 def _format_meal_detail(detail: MealLogDetail) -> str:
     lines = [
-        f"Meal updated: {detail.total_calories:.0f} kcal",
+        f"Запись обновлена: {detail.total_calories:.0f} ккал",
         "Items:",
     ]
     for item in detail.items:
