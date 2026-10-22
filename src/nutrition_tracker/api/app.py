@@ -164,8 +164,8 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                         await state_container.telegram_client.send_message(
                             chat_id=callback.message.chat.id,
                             text=(
-                                "You already have an active session. "
-                                "Send /cancel to stop it."
+                                "У тебя уже есть активная сессия. "
+                                "Отправь /cancel, чтобы отменить её."
                             ),
                         )
                         return {"status": "ok"}
@@ -194,19 +194,19 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=_format_daily_with_logs("Today", daily, logs),
+                    text=_format_daily_with_logs("Сегодня", daily, logs),
                 )
             elif message.text == "/week":
                 summary = state_container.stats_service.get_week(user.id, timezone)
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=_format_period_summary("This week", summary),
+                    text=_format_period_summary("Эта неделя", summary),
                 )
             elif message.text == "/month":
                 summary = state_container.stats_service.get_month(user.id, timezone)
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text=_format_period_summary("This month", summary),
+                    text=_format_period_summary("Этот месяц", summary),
                 )
             else:
                 history = state_container.stats_service.get_history(user.id, limit=10)
@@ -255,7 +255,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
             if active and active.status not in {"COMPLETED", "CANCELLED"}:
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text="You already have an active session. Send /cancel to stop it.",
+                    text="У тебя уже есть активная сессия. Отправь /cancel, чтобы отменить её.",
                 )
                 return {"status": "ok"}
             photo = _select_largest_photo(message.photo)
@@ -526,48 +526,52 @@ def _parse_library_callback(data: str) -> str | None:
     return action
 
 
+
 def _format_meal_summary(summary: MealLogSummary) -> str:
     """Format a meal summary for Telegram messages."""
     lines = [
-        "Meal saved!",
-        f"Total: {summary.total_calories:.0f} kcal, "
-        f"{summary.total_protein_g:.1f}P / "
-        f"{summary.total_fat_g:.1f}F / "
-        f"{summary.total_carbs_g:.1f}C",
-        "Items:",
+        "Приём пищи сохранён!",
+        f"Итого: {summary.total_calories:.0f} ккал, "
+        f"{summary.total_protein_g:.1f} Б / "
+        f"{summary.total_fat_g:.1f} Ж / "
+        f"{summary.total_carbs_g:.1f} У",
+        "Продукты:",
     ]
     for item in summary.items:
         lines.append(
-            f"- {item.name}: {item.grams:.0f}g — {item.calories:.0f} kcal "
-            f"({item.protein_g:.1f}P/{item.fat_g:.1f}F/{item.carbs_g:.1f}C)"
+            f"- {item.name}: {item.grams:.0f} г — {item.calories:.0f} ккал "
+            f"({item.protein_g:.1f} Б / {item.fat_g:.1f} Ж / "
+            f"{item.carbs_g:.1f} У)"
         )
     return "\n".join(lines)
+
+
 
 
 def _format_daily_totals(label: str, totals: DailyTotals) -> str:
     """Format daily totals for Telegram."""
     return (
-        f"{label} totals:\\n"
-        f"Calories: {totals.calories:.0f}\\n"
-        f"Protein: {totals.protein_g:.1f} g\\n"
-        f"Fat: {totals.fat_g:.1f} g\\n"
-        f"Carbs: {totals.carbs_g:.1f} g"
+        f"{label}:\n"
+        f"Калории: {totals.calories:.0f} ккал\n"
+        f"Белки: {totals.protein_g:.1f} г\n"
+        f"Жиры: {totals.fat_g:.1f} г\n"
+        f"Углеводы: {totals.carbs_g:.1f} г"
     )
+    
+
 
 
 def _format_daily_with_logs(
     label: str, totals: DailyTotals, logs: list[MealLogRow]
 ) -> str:
     """Format daily totals with per-meal list."""
-    lines = [
-        _format_daily_totals(label, totals),
-    ]
+    lines = [_format_daily_totals(label, totals)]
     if logs:
-        lines.append("Meals:")
+        lines.append("Приёмы пищи:")
         for log in logs:
             lines.append(
                 f"- {log.logged_at.time().strftime('%H:%M')}: "
-                f"{log.total_calories:.0f} kcal"
+                f"{log.total_calories:.0f} ккал"
             )
     return "\n".join(lines)
 
@@ -575,73 +579,66 @@ def _format_daily_with_logs(
 def _format_period_summary(label: str, summary: PeriodSummary) -> str:
     """Format weekly or monthly totals."""
     lines = [
-        f"{label} averages:",
-        f"Calories: {summary.avg_calories:.0f}",
-        f"Protein: {summary.avg_protein_g:.1f} g",
-        f"Fat: {summary.avg_fat_g:.1f} g",
-        f"Carbs: {summary.avg_carbs_g:.1f} g",
-        "Daily totals:",
+        f"{label} — средние значения за день:",
+        f"Калории: {summary.avg_calories:.0f} ккал",
+        f"Белки: {summary.avg_protein_g:.1f} г",
+        f"Жиры: {summary.avg_fat_g:.1f} г",
+        f"Углеводы: {summary.avg_carbs_g:.1f} г",
+        "Итого по дням:",
     ]
     for day in summary.daily:
-        lines.append(f"- {day.day}: {day.calories:.0f} kcal")
+        lines.append(f"- {day.day}: {day.calories:.0f} ккал")
     return "\n".join(lines)
 
 
 def _format_history(history: list[MealLogRow]) -> str:
     """Format recent meal history for Telegram."""
     if not history:
-        return "No recent meals logged."
-    lines = ["Recent meals:"]
+        return "Приёмы пищи ещё не записывались."
+    lines = ["Последние приёмы пищи:"]
     for entry in history:
-        lines.append(f"- {entry.logged_at.date()}: {entry.total_calories:.0f} kcal")
+        lines.append(
+            f"- {entry.logged_at.date()}: {entry.total_calories:.0f} ккал"
+        )
     return "\n".join(lines)
 
 
 def _format_library(foods: list[LibraryFood]) -> str:
     if not foods:
-        return "Your library is empty. Add a manual entry to get started."
-    lines = ["Your top foods:"]
+        return "Библиотека продуктов пуста. Добавь продукт вручную."
+    lines = ["Часто используемые продукты:"]
     for food in foods:
-        lines.append(f"- {food.name} ({food.calories:.0f} kcal per 100g)")
+        lines.append(f"- {food.name} ({food.calories:.0f} ккал на 100 г)")
     return "\n".join(lines)
-
-
-def _history_keyboard(history: list[MealLogRow]) -> dict | None:
-    if not history:
-        return None
-    return {
-        "inline_keyboard": [
-            [
-                {
-                    "text": _history_button_label(entry),
-                    "callback_data": f"h:{entry.meal_id}",
-                }
-            ]
-            for entry in history
-        ]
-    }
 
 
 def _history_detail_keyboard(meal_id: UUID) -> dict:
     return {
-        "inline_keyboard": [[{"text": "Edit grams", "callback_data": f"e:{meal_id}"}]]
+        "inline_keyboard": [
+            [{"text": "Изменить вес", "callback_data": f"e:{meal_id}"}]
+        ]
     }
 
 
 def _library_keyboard() -> dict:
     return {
-        "inline_keyboard": [[{"text": "Add manual entry", "callback_data": "lib:add"}]]
+        "inline_keyboard": [
+            [{"text": "Добавить продукт вручную", "callback_data": "lib:add"}]
+        ]
     }
 
 
 def _format_meal_detail(detail: MealLogDetail) -> str:
     lines = [
-        f"Meal: {detail.total_calories:.0f} kcal",
-        "Items:",
+        f"Приём пищи: {detail.total_calories:.0f} ккал",
+        "Продукты:",
     ]
     for item in detail.items:
-        lines.append(f"- {item.name}: {item.grams:.0f}g — {item.calories:.0f} kcal")
+        lines.append(
+            f"- {item.name}: {item.grams:.0f} г — {item.calories:.0f} ккал"
+        )
     return "\n".join(lines)
+
 
 
 def _history_button_label(entry: MealLogRow) -> str:
