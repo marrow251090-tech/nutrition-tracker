@@ -3,6 +3,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from openai import AsyncOpenAI
 from supabase import create_client
 
 from nutrition_tracker.adapters.fdc_client import HttpxFdcClient
@@ -100,9 +101,19 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         reasoning_effort=resolved_settings.openai_reasoning_effort,
         store=resolved_settings.openai_store,
     )
+    if resolved_settings.claudepoint_api_key:
+        text_client = AsyncOpenAI(
+            api_key=resolved_settings.claudepoint_api_key,
+            base_url=resolved_settings.claudepoint_base_url,
+        )
+        text_model = resolved_settings.claudepoint_model
+    else:
+        text_client = openai_client.client
+        text_model = resolved_settings.openai_model
+
     text_food_parser = TextFoodParser(
-        client=openai_client.client,
-        model=resolved_settings.openai_model,
+        client=text_client,
+        model=text_model,
         reasoning_effort=resolved_settings.openai_reasoning_effort,
     )
     fdc_client = HttpxFdcClient.create(
