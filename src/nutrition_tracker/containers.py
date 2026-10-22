@@ -101,13 +101,13 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         reasoning_effort=resolved_settings.openai_reasoning_effort,
         store=resolved_settings.openai_store,
     )
-    
-    if resolved_settings.claudepoint_api_key:
+        
+    if resolved_settings.openrouter_api_key:
         text_client = AsyncOpenAI(
-            api_key=resolved_settings.claudepoint_api_key,
-            base_url=resolved_settings.claudepoint_base_url,
+            api_key=resolved_settings.openrouter_api_key,
+            base_url=resolved_settings.openrouter_base_url,
         )
-        text_model = resolved_settings.claudepoint_model
+        text_model = resolved_settings.openrouter_model
     else:
         text_client = openai_client.client
         text_model = resolved_settings.openai_model
