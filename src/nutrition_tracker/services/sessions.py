@@ -367,20 +367,21 @@ class SessionService:
             )
             return SessionPrompt(
                 text=(
-                    "Enter calories, protein, fat, carbs per serving "
-                    "(e.g., 200, 10, 5, 30)."
-                )
+                    "Введи калории, белки, жиры и углеводы на порцию "
+                    "(например: 200, 10, 5, 30)."
+                    )
             )
 
         if session.status == STATUS_AWAITING_MANUAL_MACROS:
             macros = _parse_macros(text)
             if macros is None:
                 return SessionPrompt(
-                    text="Enter calories, protein, fat, carbs (e.g., 200, 10, 5, 30)."
+                    text= "Введи калории, белки, жиры и углеводы на порцию "
+                    "(например: 200, 10, 5, 30)."
                 )
             context = await self._finalize_manual_entry(session.id, context, macros)
             if context.get("flow") == "library":
-                return SessionPrompt(text="Saved to your library.")
+                return SessionPrompt(text=)
             return _portion_prompt(session.id, context)
 
         if session.status == STATUS_AWAITING_MANUAL_GRAMS:
@@ -436,7 +437,7 @@ class SessionService:
             session.id, status=STATUS_COMPLETED, context=dict(session.context)
         )
         if detail is None:
-            return SessionPrompt(text="Unable to update that meal item.")
+            return SessionPrompt(text=""Не удалось изменить этот продукт в записи о питании.")
         before = _edit_item_snapshot(session.context, item_id)
         after = _detail_item_snapshot(detail, item_id)
         if before or after:
@@ -482,7 +483,7 @@ class SessionService:
             status=STATUS_CANCELLED,
             context=dict(session.context),
         )
-        return SessionPrompt(text="Session cancelled. Send another photo to start.")
+        return SessionPrompt(text="Сессия отменена. Отправь другое фото, чтобы начать заново.")
 
     async def _prompt_item_confirmation(
         self, session_id: UUID, context: dict[str, object]
@@ -496,7 +497,7 @@ class SessionService:
             self.session_repository.update_session(
                 session_id, status=STATUS_AWAITING_MANUAL_NAME, context=context
             )
-            return SessionPrompt(text="What is the item? Reply with a name.")
+            return SessionPrompt(text="Что это за продукт? Напиши его название.")
         top = options[0]
         if isinstance(top, dict) and top.get("type") == "manual":
             return self._set_manual_target(session_id, context)
@@ -649,7 +650,8 @@ class SessionService:
             session_id, status=STATUS_AWAITING_MANUAL_MACROS, context=context
         )
         return SessionPrompt(
-            text="Enter calories, protein, fat, carbs per 100g (e.g., 200, 10, 5, 30)."
+            text="Введи калории, белки, жиры и углеводы на 100 г "
+                 "(например: 200, 10, 5, 30)."
         )
 
     def _set_manual_store(
@@ -828,13 +830,13 @@ def _inline_keyboard(buttons: list[tuple[str, str]]) -> dict:
 
 
 def _build_initial_prompt(vision_items: list[dict[str, object]] | None) -> str:
-    """Build the first prompt with detected items if available."""
+    """Формирует первое сообщение со списком распознанных продуктов."""
     if not vision_items:
-        return "I received your photo. Ready to identify foods?"
+        return "Фото получено. Попробовать распознать продукты?"
 
     lines = []
     for item in vision_items:
-        label = str(item.get("label", "item"))
+        label = str(item.get("label", "продукт"))
         confidence = item.get("confidence")
         if isinstance(confidence, int | float):
             confidence_pct = f"{confidence:.0%}"
@@ -842,7 +844,7 @@ def _build_initial_prompt(vision_items: list[dict[str, object]] | None) -> str:
         else:
             lines.append(f"- {label}")
     formatted = "\n".join(lines)
-    return f"I think I see:\n{formatted}\nDoes this look right?"
+    return f"Кажется, на фото:\n{formatted}\nВсё верно?"
 
 
 def _parse_grams(text: str) -> int | None:
