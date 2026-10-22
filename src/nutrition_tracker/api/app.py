@@ -353,7 +353,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 else:
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
-                        text="Please send a valid timezone like Europe/Moscow.",
+                        text="Укажи корректный часовой пояс, например Europe/Moscow.",
                     )
                 return {"status": "ok"}
 
