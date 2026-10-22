@@ -132,7 +132,7 @@ class TextFoodParser:
         output_text = response.choices[0].message.content
 
         if not output_text:
-            raise RuntimeError("ClaudePoint returned an empty response")
+            raise RuntimeError("Модель не вернула ответ")
 
         data = json.loads(output_text)
 
