@@ -117,7 +117,6 @@ def build_container(settings: Settings | None = None) -> AppContainer:
         model=text_model,
         reasoning_effort=resolved_settings.openai_reasoning_effort,
     )
-
     
     fdc_client = HttpxFdcClient.create(
         api_key=resolved_settings.fdc_api_key,
