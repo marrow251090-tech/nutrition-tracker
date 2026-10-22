@@ -1096,18 +1096,21 @@ def _build_resolved_items(context: dict[str, object]) -> list[dict[str, object]]
 
 def _format_summary(summary: MealLogSummary) -> str:
     lines = [
-        "Summary:",
-        f"Total: {summary.total_calories:.0f} kcal, "
-        f"{summary.total_protein_g:.1f}P / "
-        f"{summary.total_fat_g:.1f}F / "
-        f"{summary.total_carbs_g:.1f}C",
-        "Items:",
+        "Итог:",
+        f"Всего: {summary.total_calories:.0f} ккал",
+        f"Белки: {summary.total_protein_g:.1f} г",
+        f"Жиры: {summary.total_fat_g:.1f} г",
+        f"Углеводы: {summary.total_carbs_g:.1f} г",
+        "",
+        "Продукты:",
     ]
     for item in summary.items:
         lines.append(
-            f"- {item.name}: {item.grams:.0f}g — "
-            f"{item.calories:.0f} kcal "
-            f"({item.protein_g:.1f}P/{item.fat_g:.1f}F/{item.carbs_g:.1f}C)"
+            f"— {item.name}: {item.grams:.0f} г, "
+            f"{item.calories:.0f} ккал "
+            f"(Б {item.protein_g:.1f} г / "
+            f"Ж {item.fat_g:.1f} г / "
+            f"У {item.carbs_g:.1f} г)"
         )
     return "\n".join(lines)
 
@@ -1225,10 +1228,13 @@ def _detail_item_snapshot(
 def _format_meal_detail(detail: MealLogDetail) -> str:
     lines = [
         f"Запись обновлена: {detail.total_calories:.0f} ккал",
-        "Items:",
+        "Продукты:",
     ]
     for item in detail.items:
-        lines.append(f"- {item.name}: {item.grams:.0f}g — {item.calories:.0f} kcal")
+        lines.append(
+            f"— {item.name}: {item.grams:.0f} г — "
+            f"{item.calories:.0f} ккал"
+        )
     return "\n".join(lines)
 
 
