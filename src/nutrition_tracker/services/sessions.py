@@ -776,6 +776,46 @@ class SessionService:
                 ]
             ),
         )
+        
+    async def _save_meal(
+        self,
+        session: SessionRecord,
+        context: dict[str, object],
+    ) -> SessionPrompt | None:
+        """Save the confirmed meal and complete the session."""
+        if session.status != STATUS_AWAITING_SAVE:
+            return None
+
+        items = context.get("resolved_items", [])
+        if not isinstance(items, list) or not items:
+            return SessionPrompt(
+                text="Нет продуктов для сохранения."
+            )
+
+        try:
+            summary = await self.meal_log_service.save_meal(
+                user_id=_require_user_id(context),
+                items=items,
+            )
+        except Exception:
+            _logger.exception(
+                "Failed to save meal: session_id=%s", session.id
+            )
+            return SessionPrompt(
+                text="Не удалось сохранить запись. Попробуй ещё раз."
+            )
+
+        self.session_repository.update_session(
+            session.id,
+            status=STATUS_COMPLETED,
+            context=context,
+        )
+
+        return SessionPrompt(
+            text="Запись сохранена в дневник питания!\n\n"
+            + _format_summary(summary)
+        )
+
 
     async def _ensure_candidates(self, context: dict[str, object]) -> None:
         item = _current_item(context)
