@@ -642,7 +642,7 @@ def _format_meal_detail(detail: MealLogDetail) -> str:
 
 
 def _history_button_label(entry: MealLogRow) -> str:
-    return f"{entry.logged_at.date()} — {entry.total_calories:.0f} kcal"
+    return f"{entry.logged_at.date()} — {entry.total_calories:.0f} ккал"
 
 
 def _is_valid_timezone(value: str) -> bool:
