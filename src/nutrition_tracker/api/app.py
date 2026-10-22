@@ -63,13 +63,13 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
             if update.callback_query:
                 await state_container.telegram_client.answer_callback_query(
                     update.callback_query.id,
-                    text="Not authorized.",
+                    text="У тебя нет доступа к этому боту.",
                 )
                 return {"status": "ok"}
             if update.message:
                 await state_container.telegram_client.send_message(
                     chat_id=update.message.chat.id,
-                    text="This bot is private.",
+                    text="Этот бот доступен только разрешённым пользователям.",
                 )
                 return {"status": "ok"}
         if update.callback_query:
@@ -139,8 +139,8 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                         await state_container.telegram_client.send_message(
                             chat_id=callback.message.chat.id,
                             text=(
-                                "You already have an active session. "
-                                "Send /cancel to stop it."
+                                "У тебя уже есть активная сессия. "
+                                "Нажмите отмену, чтобы отменить её."
                             ),
                         )
                         return {"status": "ok"}
@@ -224,7 +224,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
             if active and active.status not in {"COMPLETED", "CANCELLED"}:
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
-                    text="You already have an active session. Send /cancel to stop it.",
+                    text="У тебя уже есть активная сессия. Нажми отмену, чтобы отменить её",
                 )
                 return {"status": "ok"}
             foods = state_container.library_service.search(user.id, None, limit=5)
@@ -244,7 +244,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 )
             else:
                 await state_container.telegram_client.send_message(
-                    chat_id=message.chat.id, text="No active session to cancel."
+                    chat_id=message.chat.id, text="Нет активной сессии для отмены."
                 )
             return {"status": "ok"}
 
@@ -273,7 +273,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                 await state_container.telegram_client.send_message(
                     chat_id=message.chat.id,
                     text=_format_photo_error(
-                        state_container, exc, "Couldn't download that photo."
+                        state_container, exc, "Не удалось загрузить фотографию."
                     ),
                 )
                 return {"status": "ok"}
@@ -293,8 +293,8 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                         state_container,
                         exc,
                         (
-                            "Sorry, I couldn't analyze that photo. "
-                            "Please try a clearer shot."
+                            "Не удалось распознать еду на фото. "
+                            "Попробуй отправить более чёткое фото."
                         ),
                     ),
                 )
@@ -327,7 +327,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     text=_format_photo_error(
                         state_container,
                         exc,
-                        "Sorry, I couldn't start a meal session. Please try again.",
+                        "Не удалось начать запись приёма пищи. Попробуй ещё раз.",
                     ),
                 )
                 return {"status": "ok"}
@@ -347,7 +347,7 @@ def create_app(container: AppContainer) -> FastAPI:  # noqa: PLR0915
                     )
                     await state_container.telegram_client.send_message(
                         chat_id=message.chat.id,
-                        text=f"Timezone saved: {timezone}.",
+                        text="Часовой пояс сохранён.",
                     )
 
                 else:
