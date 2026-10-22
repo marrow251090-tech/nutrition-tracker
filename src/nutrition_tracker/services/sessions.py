@@ -381,7 +381,7 @@ class SessionService:
                 )
             context = await self._finalize_manual_entry(session.id, context, macros)
             if context.get("flow") == "library":
-                return SessionPrompt(text=)
+                return SessionPrompt(text="Продукт добавлен в твой список.")
             return _portion_prompt(session.id, context)
 
         if session.status == STATUS_AWAITING_MANUAL_GRAMS:
@@ -437,7 +437,7 @@ class SessionService:
             session.id, status=STATUS_COMPLETED, context=dict(session.context)
         )
         if detail is None:
-            return SessionPrompt(text=""Не удалось изменить этот продукт в записи о питании.")
+            return SessionPrompt(text="Не удалось изменить этот продукт в записи о питании.")
         before = _edit_item_snapshot(session.context, item_id)
         after = _detail_item_snapshot(detail, item_id)
         if before or after:
