@@ -659,7 +659,7 @@ class SessionService:
     def _set_manual_store(
         self, session_id: UUID, context: dict[str, object], action: str
     ) -> SessionPrompt:
-                store = {
+        store = {
             "store_costco": "pyaterochka",
             "store_tj": "magnit",
             "store_target": "perekrestok",
@@ -671,7 +671,7 @@ class SessionService:
         self.session_repository.update_session(
             session_id, status=STATUS_AWAITING_MANUAL_BASIS, context=context
         )
-        name = str(manual.get("name", "item"))
+        name = str(manual.get("name", "продукт"))
         return _manual_basis_prompt(session_id, name)
 
     async def _finalize_manual_entry(
@@ -906,7 +906,7 @@ def _current_item_label(context: dict[str, object]) -> str:
 
 
 def _item_label(item: dict[str, object]) -> str:
-        return str(item.get("label") or item.get("name") or "продукт")
+    return str(item.get("label") or item.get("name") or "продукт")
 
 
 def _estimate_grams(item: dict[str, object]) -> int | None:
