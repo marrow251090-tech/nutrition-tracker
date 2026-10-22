@@ -270,6 +270,8 @@ class SessionService:
         self, session: SessionRecord, action: str, payload: str | None
     ) -> SessionPrompt | None:
         context = dict(session.context)
+        if action == "save":
+            return await self._save_meal(session, context)
         if action == "confirm":
             context["current_index"] = 0
             return await self._prompt_item_confirmation(session.id, context)
@@ -584,7 +586,6 @@ class SessionService:
                     prompt = self._prompt_item_selection(session_id, context)
                     return SessionPrompt(
                         text=(
-                            ". "
                             "Не удалось получить данные о продукте. "
                             "Выбери другой вариант или попробуй ещё раз.\n\n"
                             
@@ -658,10 +659,10 @@ class SessionService:
     def _set_manual_store(
         self, session_id: UUID, context: dict[str, object], action: str
     ) -> SessionPrompt:
-        store = {
-            "store_costco": "costco",
-            "store_tj": "trader_joes",
-            "store_target": "target",
+                store = {
+            "store_costco": "pyaterochka",
+            "store_tj": "magnit",
+            "store_target": "perekrestok",
             "store_other": None,
         }.get(action)
         manual = dict(context.get("manual", {}))
@@ -905,7 +906,7 @@ def _current_item_label(context: dict[str, object]) -> str:
 
 
 def _item_label(item: dict[str, object]) -> str:
-    return str(item.get("label") or item.get("name") or "item")
+        return str(item.get("label") or item.get("name") or "продукт")
 
 
 def _estimate_grams(item: dict[str, object]) -> int | None:
@@ -931,7 +932,7 @@ def _mark_skipped(context: dict[str, object]) -> None:
 def _set_item_food(context: dict[str, object], option: dict[str, object]) -> None:
     item = _current_item(context)
     item["food"] = {
-        "name": option.get("name") or option.get("label") or "item",
+        "name": option.get("name") or option.get("label") or "продукт",
         "source_type": option.get("source_type") or option.get("type"),
         "food_id": option.get("food_id"),
         "source_ref": option.get("source_ref"),
