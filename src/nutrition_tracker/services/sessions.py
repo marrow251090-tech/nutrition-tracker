@@ -146,9 +146,9 @@ class SessionService:
             text=_build_initial_prompt(vision_items),
             reply_markup=_inline_keyboard(
                 [
-                    ("Looks right", _callback_data(session.id, "confirm")),
-                    ("Fix items", _callback_data(session.id, "fix")),
-                    ("Cancel", _callback_data(session.id, "cancel")),
+                    ("Всё верно", _callback_data(session.id, "confirm")),
+                    ("Исправить продукты", _callback_data(session.id, "fix")),
+                    ("Отмена", _callback_data(session.id, "cancel")),
                 ]
             ),
         )
@@ -190,7 +190,7 @@ class SessionService:
             status=STATUS_AWAITING_MANUAL_NAME,
             context=context,
         )
-        return SessionPrompt(text="Enter the food name to add to your library.")
+        return SessionPrompt(text="Введи название продукта, чтобы добавить его в свой список.")
 
     def start_edit_session(
         self, user_id: UUID, meal_log_id: UUID
@@ -278,7 +278,7 @@ class SessionService:
                 session.id, status=STATUS_AWAITING_ITEM_LIST, context=context
             )
             return SessionPrompt(
-                text="Please list the foods in the photo (comma-separated)."
+                text="Перечисли продукты на фото через запятую."
             )
         if action == "item_yes":
             return await self._apply_candidate_selection(session.id, context, 0)
@@ -303,7 +303,7 @@ class SessionService:
             )
             item = _current_item(context)
             label = _item_label(item)
-            return SessionPrompt(text=f"Enter grams for {label}.")
+            return SessionPrompt(text=f"Введи вес продукта «{label}» в граммах.")
         if action == "portion_skip":
             _mark_skipped(context)
             return await self._advance_or_summarize(session.id, context)
@@ -325,7 +325,7 @@ class SessionService:
                 name = str(items[index].get("name", "item"))
             else:
                 name = "item"
-            return SessionPrompt(text=f"Enter new grams for {name}.")
+            return SessionPrompt(text=f"Введи новый вес продукта «{name}» в граммах.")
         return None
 
     async def _handle_photo_text(  # noqa: PLR0911, PLR0912
@@ -335,7 +335,7 @@ class SessionService:
         if session.status == STATUS_AWAITING_ITEM_LIST:
             items = _parse_item_list(text)
             if not items:
-                return SessionPrompt(text="Please send a comma-separated list.")
+                return SessionPrompt(text="Отправь список продуктов через запятую.")
             context["items"] = [{"label": item} for item in items]
             context["current_index"] = 0
             return await self._prompt_item_confirmation(session.id, context)
@@ -343,7 +343,7 @@ class SessionService:
         if session.status == STATUS_AWAITING_MANUAL_NAME:
             name = text.strip()
             if not name:
-                return SessionPrompt(text="Please provide a name for the item.")
+                return SessionPrompt(text="Введи название продукта.")
             manual = dict(context.get("manual", {}))
             manual["name"] = name
             context["manual"] = manual
@@ -353,12 +353,12 @@ class SessionService:
             return _manual_store_prompt(session.id, name)
 
         if session.status == STATUS_AWAITING_MANUAL_STORE:
-            return SessionPrompt(text="Choose a store using the buttons.")
+            return SessionPrompt(text="Выбери магазин с помощью кнопок.")
 
         if session.status == STATUS_AWAITING_MANUAL_SERVING:
             grams = _parse_grams(text)
             if grams is None:
-                return SessionPrompt(text="Enter the serving size in grams.")
+                return SessionPrompt(text="Введи вес одной порции в граммах.")
             manual = dict(context.get("manual", {}))
             manual["serving_size_g"] = grams
             context["manual"] = manual
@@ -386,14 +386,14 @@ class SessionService:
         if session.status == STATUS_AWAITING_MANUAL_GRAMS:
             grams = _parse_grams(text)
             if grams is None:
-                return SessionPrompt(text="Please reply with a number of grams.")
+                return SessionPrompt(text="Введи вес в граммах числом.")
             _record_current_grams(context, grams)
             return await self._advance_or_summarize(session.id, context)
 
         if session.status == STATUS_AWAITING_EDIT_GRAMS:
             grams = _parse_grams(text)
             if grams is None:
-                return SessionPrompt(text="Please reply with grams.")
+                return SessionPrompt(text="Введи вес в граммах числом.")
             _apply_edit_grams(context, grams)
             return await self._show_summary(session.id, context)
 
