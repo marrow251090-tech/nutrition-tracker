@@ -1,3 +1,4 @@
+
 """Parse ordinary Russian food messages into structured food items."""
 
 import json
@@ -26,7 +27,7 @@ class ParsedFoodMessage:
 
 
 class TextFoodParser:
-    """Extract foods and quantities from Russian text using OpenAI."""
+    """Extract foods and quantities from Russian text using an OpenAI-compatible API."""
 
     def __init__(
         self,
@@ -82,7 +83,7 @@ class TextFoodParser:
 
         instructions = """
 Ты разбираешь сообщения пользователя о съеденной еде.
-Отвечай только по заданной JSON-схеме.
+Верни только JSON, соответствующий заданной схеме.
 
 Правила:
 - Понимай русский язык, разговорные фразы и опечатки.
@@ -90,7 +91,7 @@ class TextFoodParser:
 - Сохраняй указанное количество.
 - Единицы: g для граммов, ml для миллилитров,
   piece для штук, serving для порций.
-- Переводи килограммы в граммы, если это необходимо.
+- Переводи килограммы в граммы.
 - Для яиц и других продуктов, указанных в штуках,
   используй piece.
 - В name указывай конкретный продукт.
@@ -109,39 +110,29 @@ class TextFoodParser:
   что пользователь его съел: ориентируйся на смысл сообщения.
 """
 
-        request_payload: dict[str, object] = {
-            "model": self.model,
-            "input": [
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
                 {
                     "role": "system",
-                    "content": instructions,
+                    "content": (
+                        instructions
+                        + "\n\nJSON schema:\n"
+                        + json.dumps(schema, ensure_ascii=False)
+                    ),
                 },
                 {
                     "role": "user",
                     "content": text,
                 },
             ],
-            "text": {
-                "format": {
-                    "type": "json_schema",
-                    "name": "text_food_extract",
-                    "strict": True,
-                    "schema": schema,
-                }
-            },
-            "store": False,
-        }
+            response_format={"type": "json_object"},
+        )
 
-        if self.reasoning_effort:
-            request_payload["reasoning"] = {
-                "effort": self.reasoning_effort,
-            }
-
-        response = await self.client.responses.create(**request_payload)
-        output_text = response.output_text
+        output_text = response.choices[0].message.content
 
         if not output_text:
-            raise RuntimeError("OpenAI returned an empty response")
+            raise RuntimeError("ClaudePoint returned an empty response")
 
         data = json.loads(output_text)
 
@@ -150,7 +141,7 @@ class TextFoodParser:
                 name=str(item["name"]).strip(),
                 quantity=float(item["quantity"]),
                 unit=str(item["unit"]),
-                preparation=item["preparation"],
+                preparation=item.get("preparation"),
             )
             for item in data["items"]
             if str(item["name"]).strip() and float(item["quantity"]) > 0
@@ -159,5 +150,5 @@ class TextFoodParser:
         return ParsedFoodMessage(
             items=items,
             needs_clarification=bool(data["needs_clarification"]),
-            clarification_question=data["clarification_question"],
+            clarification_question=data.get("clarification_question"),
         )
