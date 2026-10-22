@@ -414,7 +414,7 @@ class SessionService:
                 session.id, status=STATUS_EDIT_ENTER_GRAMS, context=context
             )
             name = context.get("edit_item_name", "item")
-            return SessionPrompt(text="Введи новый вес продукта «{name}» в граммах.")
+            return SessionPrompt(text=f"Введи новый вес продукта «{name}» в граммах.")
         return None
 
     def _handle_edit_text(
@@ -490,7 +490,7 @@ class SessionService:
     ) -> SessionPrompt:
         items = context.get("items", [])
         if not isinstance(items, list) or not items:
-            context["items"] = [{"label": "item"}]
+            context["items"] = [{"label": "продукт"}]
         await self._ensure_candidates(context)
         options = context.get("candidate_options", [])
         if not isinstance(options, list) or not options:
@@ -502,7 +502,7 @@ class SessionService:
         if isinstance(top, dict) and top.get("type") == "manual":
             return self._set_manual_target(session_id, context)
         label = _current_item_label(context)
-        choice = str(top.get("label", "this item"))
+        choice = str(top.get("label", "этот продукт"))
         self.session_repository.update_session(
             session_id, status=STATUS_AWAITING_ITEM_CONFIRMATION, context=context
         )
@@ -525,7 +525,7 @@ class SessionService:
             for index, option in enumerate(options):
                 if not isinstance(option, dict):
                     continue
-                label = str(option.get("label", "Option"))
+                label = str(option.get("label", "Вариант"))
                 buttons.append(
                     (label, _callback_data(session_id, "choose", str(index)))
                 )
@@ -584,9 +584,10 @@ class SessionService:
                     prompt = self._prompt_item_selection(session_id, context)
                     return SessionPrompt(
                         text=(
-                            "USDA lookup timed out. "
-                            "Please choose another option or try again.\n\n"
-                            f"{prompt.text}"
+                            ". "
+                            "Не удалось получить данные о продукте. "
+                            "Выбери другой вариант или попробуй ещё раз.\n\n"
+                            
                         ),
                         reply_markup=prompt.reply_markup,
                     )
@@ -848,12 +849,28 @@ def _build_initial_prompt(vision_items: list[dict[str, object]] | None) -> str:
 
 
 def _parse_grams(text: str) -> int | None:
-    """Parse a grams value from user input."""
-    cleaned = text.strip().lower().replace("grams", "").replace("g", "").strip()
+    """Разбирает вес продукта, введённый пользователем."""
+    cleaned = text.strip().lower().replace(",", ".")
+
+    for suffix in (
+        "граммов",
+        "грамм",
+        "грамма",
+        "грам",
+        "grams",
+        "gram",
+        "г",
+        "g",
+    ):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[:-len(suffix)].strip()
+            break
+
     try:
         value = float(cleaned)
     except ValueError:
         return None
+
     return int(value) if value > 0 else None
 
 
@@ -970,7 +987,7 @@ def _manual_store_prompt(session_id: UUID, name: str) -> SessionPrompt:
                 ("Пятёрочка", _callback_data(session_id, "store_costco")),
                 ("Магнит", _callback_data(session_id, "store_tj")),
                 ("Перекрёсток", _callback_data(session_id, "store_target")),
-                (""Другой / пропустить",, _callback_data(session_id, "store_other")),
+                ("Другой магазин / пропустить", _callback_data(session_id, "store_other")),
             ]
         ),
     )
@@ -1186,7 +1203,7 @@ def _edit_item_prompt(session_id: UUID, context: dict[str, object]) -> SessionPr
                     (label, _callback_data(session_id, "edit_item", str(index)))
                 )
     return SessionPrompt(
-        text="Which item do you want to edit?",
+        text="Какой продукт хочешь изменить?",
         reply_markup=_inline_keyboard(buttons),
     )
 
